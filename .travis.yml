@@ -1,6 +1,8 @@
 sudo: required
 dist: trusty
 language: c
+python:
+  - "3.5"
 cache:
   apt: true
   directories:
@@ -27,10 +29,18 @@ before_install:
   - setup_apt
   - curl https://install.citusdata.com/community/deb.sh | sudo bash
   - nuke_pg
+  - pyenv versions
+  - pyenv global 3.6
+  - sudo apt-get install python3-pip
+  - sudo pip3 install --upgrade pip
+  - python --version
+  - python3 --version
 install:
   - install_uncrustify
   - install_pg
   - install_custom_pg
+  - pip3 install --user mitmproxy==3.0.4
+  - mitmproxy --version
   # download and install HLL manually, as custom builds won't satisfy deps
   # only install if performing non-11 build
   - |
@@ -39,7 +49,7 @@ install:
       sudo dpkg --force-confold --force-confdef --force-all -i *hll*.deb
     fi
 before_script: citus_indent --quiet --check
-script: CFLAGS=-Werror pg_travis_multi_test check
+script: CFLAGS=-Werror pg_travis_multi_test check-failure
 after_success:
   - sync_to_enterprise
   - bash <(curl -s https://codecov.io/bash)

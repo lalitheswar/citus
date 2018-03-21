@@ -1,0 +1,91 @@
+-- disable the maintenance daemon, prevent it from making any connections
+ALTER SYSTEM SET citus.distributed_deadlock_detection_factor TO -1;
+ALTER SYSTEM SET citus.recover_2pc_interval TO -1;
+ALTER SYSTEM set citus.enable_statistics_collection TO false;
+SELECT pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+SELECT citus.mitmproxy('flow.allow()');
+ mitmproxy 
+-----------
+ 
+(1 row)
+
+-- add the workers
+SELECT master_add_node('localhost', :worker_1_port);  -- the second worker
+                  master_add_node                  
+---------------------------------------------------
+ (1,1,localhost,57637,default,f,t,primary,default)
+(1 row)
+
+SELECT master_add_node('localhost', :worker_2_port + 2);  -- the first worker, behind a mitmproxy
+                  master_add_node                  
+---------------------------------------------------
+ (2,2,localhost,57640,default,f,t,primary,default)
+(1 row)
+
+CREATE TABLE test (a int, b int);
+SELECT create_distributed_table('test', 'a');
+ create_distributed_table 
+--------------------------
+ 
+(1 row)
+
+BEGIN;
+UPDATE test SET b = 2 WHERE a = 2;
+ROLLBACK;
+SELECT citus.mitmproxy('flow.contains(b"UPDATE").kill()');
+ mitmproxy 
+-----------
+ 
+(1 row)
+
+BEGIN;
+UPDATE test SET b = 2 WHERE a = 2;
+WARNING:  server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+CONTEXT:  while executing command on localhost:57640
+ROLLBACK;
+SELECT citus.mitmproxy('flow.contains(b"BEGIN").kill()');
+ mitmproxy 
+-----------
+ 
+(1 row)
+
+BEGIN;
+UPDATE test SET b = 2 WHERE a = 2;
+WARNING:  connection not open
+CONTEXT:  while executing command on localhost:57640
+ROLLBACK;
+SET citus.multi_shard_commit_protocol = '2pc';
+SELECT citus.mitmproxy('flow.contains(b"COMMIT").kill()');
+ mitmproxy 
+-----------
+ 
+(1 row)
+
+BEGIN;
+UPDATE test SET b = 2 WHERE a = 2;
+WARNING:  connection not open
+CONTEXT:  while executing command on localhost:57640
+COMMIT;
+WARNING:  connection not open
+CONTEXT:  while executing command on localhost:57640
+WARNING:  connection not open
+CONTEXT:  while executing command on localhost:57640
+WARNING:  connection not open
+CONTEXT:  while executing command on localhost:57640
+SELECT citus.mitmproxy('flow.allow()');
+ mitmproxy 
+-----------
+ 
+(1 row)
+
+SET citus.multi_shard_commit_protocol = '2pc';
+BEGIN;
+UPDATE test SET b = 2 WHERE a = 2;
+COMMIT;
