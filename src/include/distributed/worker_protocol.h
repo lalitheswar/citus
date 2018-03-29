@@ -73,6 +73,7 @@ typedef struct RangePartitionContext
 typedef struct HashPartitionContext
 {
 	FmgrInfo *hashFunction;
+	Datum *splitPointArray;
 	uint32 partitionCount;
 } HashPartitionContext;
 

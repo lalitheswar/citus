@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <math.h>
 #include <unistd.h>
+#include <stdint.h>
 
 #include "access/hash.h"
 #include "access/htup_details.h"
@@ -178,27 +179,36 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 	text *filterQueryText = PG_GETARG_TEXT_P(2);
 	text *partitionColumnText = PG_GETARG_TEXT_P(3);
 	Oid partitionColumnType = PG_GETARG_OID(4);
-	uint32 partitionCount = PG_GETARG_UINT32(5);
+	ArrayType *hashRangeObject = PG_GETARG_ARRAYTYPE_P(5);
 
 	const char *filterQuery = text_to_cstring(filterQueryText);
 	const char *partitionColumn = text_to_cstring(partitionColumnText);
 
 	HashPartitionContext *partitionContext = NULL;
 	FmgrInfo *hashFunction = NULL;
+	Datum *hashRangeArray = NULL;
+	int32 partitionCount = 0;
 	StringInfo taskDirectory = NULL;
 	StringInfo taskAttemptDirectory = NULL;
 	FileOutputStream *partitionFileArray = NULL;
-	uint32 fileCount = partitionCount;
+	uint32 fileCount = 0;
 
 	CheckCitusVersion(ERROR);
 
 	/* use column's type information to get the hashing function */
 	hashFunction = GetFunctionInfo(partitionColumnType, HASH_AM_OID, HASHSTANDARD_PROC);
 
+	hashRangeArray = DeconstructArrayObject(hashRangeObject);
+	partitionCount = ArrayObjectCount(hashRangeObject);
+
+	/* we create as many files as the number of split points */
+	fileCount = partitionCount;
+
 	/* create hash partition context object */
 	partitionContext = palloc0(sizeof(HashPartitionContext));
 	partitionContext->hashFunction = hashFunction;
 	partitionContext->partitionCount = partitionCount;
+	partitionContext->splitPointArray = hashRangeArray;
 
 	/* init directories and files to write the partitioned data to */
 	taskDirectory = InitTaskDirectory(jobId, taskId);
@@ -1156,14 +1166,8 @@ RangePartitionId(Datum partitionValue, const void *context)
 /*
  * HashPartitionId determines the partition number for the given data value
  * using hash partitioning. More specifically, the function returns zero if the
- * given data value is null. If not, the function applies the standard Postgres
- * hashing function for the given data type, and mods the hashed result with the
- * number of partitions. The function then returns the modded number as the
- * partition number.
- *
- * Note that any changes to PostgreSQL's hashing functions will reshuffle the
- * entire distribution created by this function. For a discussion of this issue,
- * see Google "PL/Proxy Users: Hash Functions Have Changed in PostgreSQL 8.4."
+ * given data value is null. If not, the function follows the exact same approach
+ * as Citus distributed planner uses.
  */
 static uint32
 HashPartitionId(Datum partitionValue, const void *context)
@@ -1172,13 +1176,19 @@ HashPartitionId(Datum partitionValue, const void *context)
 	FmgrInfo *hashFunction = hashPartitionContext->hashFunction;
 	uint32 partitionCount = hashPartitionContext->partitionCount;
 	Datum hashDatum = 0;
-	uint32 hashResult = 0;
+	int32 hashResult = 0;
 	uint32 hashPartitionId = 0;
 
-	/* hash functions return unsigned 32-bit integers */
+	uint64 hashTokenIncrement = HASH_TOKEN_COUNT / partitionCount;
+
 	hashDatum = FunctionCall1(hashFunction, partitionValue);
-	hashResult = DatumGetUInt32(hashDatum);
-	hashPartitionId = (hashResult % partitionCount);
+	if (hashDatum == 0)
+	{
+		return hashPartitionId;
+	}
+
+	hashResult = DatumGetInt32(hashDatum);
+	hashPartitionId = (uint32) (hashResult - INT32_MIN) / hashTokenIncrement;
 
 	return hashPartitionId;
 }

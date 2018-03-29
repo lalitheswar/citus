@@ -14,6 +14,7 @@
 #include "postgres.h"
 
 #include <math.h>
+#include <stdint.h>
 
 #include "miscadmin.h"
 
@@ -184,6 +185,7 @@ static int CompareTasksByTaskId(const void *leftElement, const void *rightElemen
 static void AssignDataFetchDependencies(List *taskList);
 static uint32 TaskListHighestTaskId(List *taskList);
 static List * MapTaskList(MapMergeJob *mapMergeJob, List *filterTaskList);
+static ShardInterval ** GenerateSyntheticShardIntervalArray(int partitionCount);
 static char * ColumnName(Var *column, List *rangeTableList);
 static StringInfo SplitPointArrayString(ArrayType *splitPointObject,
 										Oid columnType, int32 columnTypeMod);
@@ -4191,10 +4193,16 @@ MapTaskList(MapMergeJob *mapMergeJob, List *filterTaskList)
 		else
 		{
 			uint32 partitionCount = mapMergeJob->partitionCount;
+			ShardInterval **intervalArray =
+				GenerateSyntheticShardIntervalArray(partitionCount);
+			ArrayType *splitPointObject = SplitPointObject(intervalArray,
+														   mapMergeJob->partitionCount);
+			StringInfo splitPointString =
+				SplitPointArrayString(splitPointObject, INT4OID, get_typmodin(INT4OID));
 
 			appendStringInfo(mapQueryString, HASH_PARTITION_COMMAND, jobId, taskId,
 							 filterQueryEscapedText, partitionColumnName,
-							 partitionColumnTypeFullName, partitionCount);
+							 partitionColumnTypeFullName, splitPointString->data);
 		}
 
 		/* convert filter query task into map task */
@@ -4206,6 +4214,46 @@ MapTaskList(MapMergeJob *mapMergeJob, List *filterTaskList)
 	}
 
 	return mapTaskList;
+}
+
+
+/*
+ * GenerateSyntheticShardIntervalArray returns a shard interval pointer array
+ * which has a uniform hash distribution for the given input partitionCount.
+ *
+ * The function only fills the min/max values of shard the intervals. Thus, should
+ * not be used for general purpose operations.
+ */
+static ShardInterval **
+GenerateSyntheticShardIntervalArray(int partitionCount)
+{
+	ShardInterval **shardIntervalArray = palloc0(partitionCount *
+												 sizeof(ShardInterval *));
+	uint64 hashTokenIncrement = HASH_TOKEN_COUNT / partitionCount;
+	int shardIndex = 0;
+
+	for (shardIndex = 0; shardIndex < partitionCount; ++shardIndex)
+	{
+		ShardInterval *shardInterval = CitusMakeNode(ShardInterval);
+
+		/* calculate the split of the hash space */
+		int32 shardMinHashToken = INT32_MIN + (shardIndex * hashTokenIncrement);
+		int32 shardMaxHashToken = shardMinHashToken + (hashTokenIncrement - 1);
+
+		shardInterval->relationId = InvalidOid;
+		shardInterval->minValueExists = true;
+		shardInterval->minValue = Int32GetDatum(shardMinHashToken);
+
+		shardInterval->maxValueExists = true;
+		shardInterval->maxValue = Int32GetDatum(shardMaxHashToken);
+
+		shardInterval->shardId = INVALID_SHARD_ID;
+		shardInterval->valueTypeId = INT4OID;
+
+		shardIntervalArray[shardIndex] = shardInterval;
+	}
+
+	return shardIntervalArray;
 }
 
 
