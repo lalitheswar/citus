@@ -1767,27 +1767,18 @@ DEBUG:  Plan is router executable
 SELECT * FROM articles_hash ar join authors_range au on (ar.author_id = au.id)
 	WHERE ar.author_id = 3;
 DEBUG:  Found no worker with all shard placements
-DEBUG:  join prunable for intervals [1,10] and [11,30]
-DEBUG:  join prunable for intervals [1,10] and [21,40]
-DEBUG:  join prunable for intervals [1,10] and [31,40]
-DEBUG:  join prunable for intervals [11,30] and [1,10]
-DEBUG:  join prunable for intervals [11,30] and [31,40]
-DEBUG:  join prunable for intervals [21,40] and [1,10]
-DEBUG:  join prunable for intervals [31,40] and [1,10]
-DEBUG:  join prunable for intervals [31,40] and [11,30]
-DEBUG:  pruning merge fetch taskId 1
+DEBUG:  join prunable for intervals [-2147483648,-1] and [0,2147483647]
+DEBUG:  pruning merge fetch taskId 2
 DETAIL:  Creating dependency on merge taskId 2
 DEBUG:  pruning merge fetch taskId 3
 DETAIL:  Creating dependency on merge taskId 4
 DEBUG:  pruning merge fetch taskId 5
 DETAIL:  Creating dependency on merge taskId 4
-DEBUG:  pruning merge fetch taskId 7
 DETAIL:  Creating dependency on merge taskId 6
 DEBUG:  pruning merge fetch taskId 9
 DETAIL:  Creating dependency on merge taskId 6
 DEBUG:  pruning merge fetch taskId 11
 DETAIL:  Creating dependency on merge taskId 6
-DEBUG:  pruning merge fetch taskId 13
 DETAIL:  Creating dependency on merge taskId 8
 DEBUG:  pruning merge fetch taskId 15
 DETAIL:  Creating dependency on merge taskId 8

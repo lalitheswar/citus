@@ -103,7 +103,7 @@ ERROR:  cannot perform distributed planning on this query
 DETAIL:  Cartesian products are currently unsupported
 EXPLAIN SELECT count(*) FROM orders, lineitem_hash
 	WHERE o_orderkey = l_orderkey;
-LOG:  join order: [ "orders" ][ single range partition join "lineitem_hash" ]
+LOG:  join order: [ "lineitem_hash" ][ single hash partition join "orders" ]
                                 QUERY PLAN                                
 --------------------------------------------------------------------------
  Aggregate  (cost=0.00..0.00 rows=0 width=0)
@@ -149,7 +149,7 @@ LOG:  join order: [ "orders" ][ dual partition join "lineitem" ][ dual partition
 -- hash-partitioned base table
 EXPLAIN SELECT count(*) FROM orders, customer_hash
 	WHERE c_custkey = o_custkey;
-LOG:  join order: [ "orders" ][ dual partition join "customer_hash" ]
+LOG:  join order: [ "orders" ][ single hash partition join "customer_hash" ]
                                 QUERY PLAN                                
 --------------------------------------------------------------------------
  Aggregate  (cost=0.00..0.00 rows=0 width=0)

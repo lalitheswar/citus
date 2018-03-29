@@ -142,6 +142,10 @@ static MultiNode * ApplySingleRangePartitionJoin(MultiNode *leftNode,
 												 MultiNode *rightNode,
 												 Var *partitionColumn, JoinType joinType,
 												 List *applicableJoinClauses);
+static MultiNode * ApplySingleHashPartitionJoin(MultiNode *leftNode,
+												MultiNode *rightNode,
+												Var *partitionColumn, JoinType joinType,
+												List *applicableJoinClauses);
 static MultiJoin * ApplySinglePartitionJoin(MultiNode *leftNode, MultiNode *rightNode,
 											Var *partitionColumn, JoinType joinType,
 											List *joinClauses);
@@ -3482,6 +3486,8 @@ JoinRuleApplyFunction(JoinRuleType ruleType)
 	{
 		RuleApplyFunctionArray[REFERENCE_JOIN] = &ApplyReferenceJoin;
 		RuleApplyFunctionArray[LOCAL_PARTITION_JOIN] = &ApplyLocalJoin;
+		RuleApplyFunctionArray[SINGLE_HASH_PARTITION_JOIN] =
+			&ApplySingleHashPartitionJoin;
 		RuleApplyFunctionArray[SINGLE_RANGE_PARTITION_JOIN] =
 			&ApplySingleRangePartitionJoin;
 		RuleApplyFunctionArray[DUAL_PARTITION_JOIN] = &ApplyDualPartitionJoin;
@@ -3553,6 +3559,25 @@ ApplySingleRangePartitionJoin(MultiNode *leftNode, MultiNode *rightNode,
 								 applicableJoinClauses);
 
 	joinNode->joinRuleType = SINGLE_RANGE_PARTITION_JOIN;
+
+	return (MultiNode *) joinNode;
+}
+
+
+/*
+ * ApplySingleHashPartitionJoin is a wrapper around ApplySinglePartitionJoin()
+ * which sets the joinRuleType properly.
+ */
+static MultiNode *
+ApplySingleHashPartitionJoin(MultiNode *leftNode, MultiNode *rightNode,
+							 Var *partitionColumn, JoinType joinType,
+							 List *applicableJoinClauses)
+{
+	MultiJoin *joinNode =
+		ApplySinglePartitionJoin(leftNode, rightNode, partitionColumn, joinType,
+								 applicableJoinClauses);
+
+	joinNode->joinRuleType = SINGLE_HASH_PARTITION_JOIN;
 
 	return (MultiNode *) joinNode;
 }

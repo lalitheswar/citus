@@ -669,7 +669,8 @@ LargeDataTransferLocation(List *joinOrder)
 		JoinRuleType joinRuleType = joinOrderNode->joinRuleType;
 
 		/* we consider the following join rules to cause large data transfers */
-		if (joinRuleType == SINGLE_RANGE_PARTITION_JOIN ||
+		if (joinRuleType == SINGLE_HASH_PARTITION_JOIN ||
+			joinRuleType == SINGLE_RANGE_PARTITION_JOIN ||
 			joinRuleType == DUAL_PARTITION_JOIN ||
 			joinRuleType == CARTESIAN_PRODUCT)
 		{
@@ -863,6 +864,7 @@ JoinRuleEvalFunction(JoinRuleType ruleType)
 		RuleEvalFunctionArray[REFERENCE_JOIN] = &ReferenceJoin;
 		RuleEvalFunctionArray[LOCAL_PARTITION_JOIN] = &LocalJoin;
 		RuleEvalFunctionArray[SINGLE_RANGE_PARTITION_JOIN] = &SinglePartitionJoin;
+		RuleEvalFunctionArray[SINGLE_HASH_PARTITION_JOIN] = &SinglePartitionJoin;
 		RuleEvalFunctionArray[DUAL_PARTITION_JOIN] = &DualPartitionJoin;
 		RuleEvalFunctionArray[CARTESIAN_PRODUCT] = &CartesianProduct;
 
@@ -888,6 +890,8 @@ JoinRuleName(JoinRuleType ruleType)
 		/* use strdup() to be independent of memory contexts */
 		RuleNameArray[REFERENCE_JOIN] = strdup("reference join");
 		RuleNameArray[LOCAL_PARTITION_JOIN] = strdup("local partition join");
+		RuleNameArray[SINGLE_HASH_PARTITION_JOIN] =
+			strdup("single hash partition join");
 		RuleNameArray[SINGLE_RANGE_PARTITION_JOIN] =
 			strdup("single range partition join");
 		RuleNameArray[DUAL_PARTITION_JOIN] = strdup("dual partition join");
@@ -1045,6 +1049,8 @@ SinglePartitionJoin(JoinOrderNode *currentJoinNode, TableEntry *candidateTable,
 	char currentPartitionMethod = currentJoinNode->partitionMethod;
 	TableEntry *currentAnchorTable = currentJoinNode->anchorTable;
 
+	OpExpr *joinClause = NULL;
+
 	Oid relationId = candidateTable->relationId;
 	uint32 tableId = candidateTable->rangeTableId;
 	Var *candidatePartitionColumn = PartitionColumn(relationId, tableId);
@@ -1065,12 +1071,18 @@ SinglePartitionJoin(JoinOrderNode *currentJoinNode, TableEntry *candidateTable,
 		return NULL;
 	}
 
-	if (currentPartitionMethod != DISTRIBUTE_BY_HASH)
+	joinClause =
+		SinglePartitionJoinClause(currentPartitionColumn, applicableJoinClauses);
+	if (joinClause != NULL)
 	{
-		OpExpr *joinClause = SinglePartitionJoinClause(currentPartitionColumn,
-													   applicableJoinClauses);
-
-		if (joinClause != NULL)
+		if (currentPartitionMethod == DISTRIBUTE_BY_HASH)
+		{
+			nextJoinNode = MakeJoinOrderNode(candidateTable, SINGLE_HASH_PARTITION_JOIN,
+											 currentPartitionColumn,
+											 currentPartitionMethod,
+											 currentAnchorTable);
+		}
+		else
 		{
 			nextJoinNode = MakeJoinOrderNode(candidateTable, SINGLE_RANGE_PARTITION_JOIN,
 											 currentPartitionColumn,
@@ -1080,18 +1092,29 @@ SinglePartitionJoin(JoinOrderNode *currentJoinNode, TableEntry *candidateTable,
 	}
 
 	/* evaluate re-partitioning the current table only if the rule didn't apply above */
-	if (nextJoinNode == NULL && candidatePartitionMethod != DISTRIBUTE_BY_HASH &&
-		candidatePartitionMethod != DISTRIBUTE_BY_NONE)
+	if (nextJoinNode == NULL && candidatePartitionMethod != DISTRIBUTE_BY_NONE)
 	{
 		OpExpr *joinClause = SinglePartitionJoinClause(candidatePartitionColumn,
 													   applicableJoinClauses);
 
 		if (joinClause != NULL)
 		{
-			nextJoinNode = MakeJoinOrderNode(candidateTable, SINGLE_RANGE_PARTITION_JOIN,
-											 candidatePartitionColumn,
-											 candidatePartitionMethod,
-											 candidateTable);
+			if (candidatePartitionMethod == DISTRIBUTE_BY_HASH)
+			{
+				nextJoinNode = MakeJoinOrderNode(candidateTable,
+												 SINGLE_HASH_PARTITION_JOIN,
+												 candidatePartitionColumn,
+												 candidatePartitionMethod,
+												 candidateTable);
+			}
+			else
+			{
+				nextJoinNode = MakeJoinOrderNode(candidateTable,
+												 SINGLE_RANGE_PARTITION_JOIN,
+												 candidatePartitionColumn,
+												 candidatePartitionMethod,
+												 candidateTable);
+			}
 		}
 	}
 
