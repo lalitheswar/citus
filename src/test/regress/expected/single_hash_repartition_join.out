@@ -47,14 +47,14 @@ DEBUG:  join prunable for intervals [0,1073741823] and [1073741824,2147483647]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-2147483648,-1073741825]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-1073741824,-1]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [0,1073741823]
-DEBUG:  pruning merge fetch taskId 2
-DETAIL:  Creating dependency on merge taskId 9
+DEBUG:  pruning merge fetch taskId 1
+DETAIL:  Creating dependency on merge taskId 5
+DEBUG:  pruning merge fetch taskId 3
+DETAIL:  Creating dependency on merge taskId 10
 DEBUG:  pruning merge fetch taskId 5
-DETAIL:  Creating dependency on merge taskId 14
-DEBUG:  pruning merge fetch taskId 8
-DETAIL:  Creating dependency on merge taskId 19
-DEBUG:  pruning merge fetch taskId 11
-DETAIL:  Creating dependency on merge taskId 24
+DETAIL:  Creating dependency on merge taskId 15
+DEBUG:  pruning merge fetch taskId 7
+DETAIL:  Creating dependency on merge taskId 20
 ERROR:  the query contains a join that requires repartitioning
 HINT:  Set citus.enable_repartition_joins to on to enable repartitioning
 -- the same query with the orders of the tables have changed
@@ -77,14 +77,14 @@ DEBUG:  join prunable for intervals [0,1073741823] and [1073741824,2147483647]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-2147483648,-1073741825]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-1073741824,-1]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [0,1073741823]
-DEBUG:  pruning merge fetch taskId 2
-DETAIL:  Creating dependency on merge taskId 9
+DEBUG:  pruning merge fetch taskId 1
+DETAIL:  Creating dependency on merge taskId 5
+DEBUG:  pruning merge fetch taskId 3
+DETAIL:  Creating dependency on merge taskId 10
 DEBUG:  pruning merge fetch taskId 5
-DETAIL:  Creating dependency on merge taskId 14
-DEBUG:  pruning merge fetch taskId 8
-DETAIL:  Creating dependency on merge taskId 19
-DEBUG:  pruning merge fetch taskId 11
-DETAIL:  Creating dependency on merge taskId 24
+DETAIL:  Creating dependency on merge taskId 15
+DEBUG:  pruning merge fetch taskId 7
+DETAIL:  Creating dependency on merge taskId 20
 ERROR:  the query contains a join that requires repartitioning
 HINT:  Set citus.enable_repartition_joins to on to enable repartitioning
 -- single hash repartition after bcast joins
@@ -107,14 +107,14 @@ DEBUG:  join prunable for intervals [0,1073741823] and [1073741824,2147483647]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-2147483648,-1073741825]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-1073741824,-1]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [0,1073741823]
+DEBUG:  pruning merge fetch taskId 1
+DETAIL:  Creating dependency on merge taskId 5
 DEBUG:  pruning merge fetch taskId 3
-DETAIL:  Creating dependency on merge taskId 9
+DETAIL:  Creating dependency on merge taskId 10
+DEBUG:  pruning merge fetch taskId 5
+DETAIL:  Creating dependency on merge taskId 15
 DEBUG:  pruning merge fetch taskId 7
-DETAIL:  Creating dependency on merge taskId 14
-DEBUG:  pruning merge fetch taskId 11
-DETAIL:  Creating dependency on merge taskId 19
-DEBUG:  pruning merge fetch taskId 15
-DETAIL:  Creating dependency on merge taskId 24
+DETAIL:  Creating dependency on merge taskId 20
 ERROR:  the query contains a join that requires repartitioning
 HINT:  Set citus.enable_repartition_joins to on to enable repartitioning
 -- a more complicated join order, first colocated join, later single hash repartition join
@@ -150,13 +150,13 @@ DEBUG:  join prunable for intervals [1073741824,2147483647] and [-2147483648,-10
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-1073741824,-1]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [0,1073741823]
 DEBUG:  pruning merge fetch taskId 1
-DETAIL:  Creating dependency on merge taskId 13
-DEBUG:  pruning merge fetch taskId 4
-DETAIL:  Creating dependency on merge taskId 18
+DETAIL:  Creating dependency on merge taskId 5
+DEBUG:  pruning merge fetch taskId 3
+DETAIL:  Creating dependency on merge taskId 10
+DEBUG:  pruning merge fetch taskId 5
+DETAIL:  Creating dependency on merge taskId 15
 DEBUG:  pruning merge fetch taskId 7
-DETAIL:  Creating dependency on merge taskId 23
-DEBUG:  pruning merge fetch taskId 10
-DETAIL:  Creating dependency on merge taskId 28
+DETAIL:  Creating dependency on merge taskId 20
 ERROR:  the query contains a join that requires repartitioning
 HINT:  Set citus.enable_repartition_joins to on to enable repartitioning
 -- a more complicated join order, first hash-repartition join, later single hash repartition join
@@ -180,13 +180,13 @@ DEBUG:  join prunable for intervals [1073741824,2147483647] and [-2147483648,-10
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-1073741824,-1]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [0,1073741823]
 DEBUG:  pruning merge fetch taskId 1
-DETAIL:  Creating dependency on merge taskId 9
-DEBUG:  pruning merge fetch taskId 4
-DETAIL:  Creating dependency on merge taskId 14
+DETAIL:  Creating dependency on merge taskId 5
+DEBUG:  pruning merge fetch taskId 3
+DETAIL:  Creating dependency on merge taskId 10
+DEBUG:  pruning merge fetch taskId 5
+DETAIL:  Creating dependency on merge taskId 15
 DEBUG:  pruning merge fetch taskId 7
-DETAIL:  Creating dependency on merge taskId 19
-DEBUG:  pruning merge fetch taskId 10
-DETAIL:  Creating dependency on merge taskId 24
+DETAIL:  Creating dependency on merge taskId 20
 DEBUG:  join prunable for task partitionId 0 and 1
 DEBUG:  join prunable for task partitionId 0 and 2
 DEBUG:  join prunable for task partitionId 0 and 3
@@ -200,21 +200,21 @@ DEBUG:  join prunable for task partitionId 3 and 0
 DEBUG:  join prunable for task partitionId 3 and 1
 DEBUG:  join prunable for task partitionId 3 and 2
 DEBUG:  pruning merge fetch taskId 1
-DETAIL:  Creating dependency on merge taskId 13
-DEBUG:  pruning merge fetch taskId 2
 DETAIL:  Creating dependency on merge taskId 9
+DEBUG:  pruning merge fetch taskId 2
+DETAIL:  Creating dependency on merge taskId 5
 DEBUG:  pruning merge fetch taskId 4
-DETAIL:  Creating dependency on merge taskId 18
-DEBUG:  pruning merge fetch taskId 5
 DETAIL:  Creating dependency on merge taskId 14
+DEBUG:  pruning merge fetch taskId 5
+DETAIL:  Creating dependency on merge taskId 10
 DEBUG:  pruning merge fetch taskId 7
-DETAIL:  Creating dependency on merge taskId 23
-DEBUG:  pruning merge fetch taskId 8
 DETAIL:  Creating dependency on merge taskId 19
+DEBUG:  pruning merge fetch taskId 8
+DETAIL:  Creating dependency on merge taskId 15
 DEBUG:  pruning merge fetch taskId 10
-DETAIL:  Creating dependency on merge taskId 28
-DEBUG:  pruning merge fetch taskId 11
 DETAIL:  Creating dependency on merge taskId 24
+DEBUG:  pruning merge fetch taskId 11
+DETAIL:  Creating dependency on merge taskId 20
 ERROR:  the query contains a join that requires repartitioning
 HINT:  Set citus.enable_repartition_joins to on to enable repartitioning
 -- single hash repartitioning is not supported between different column types

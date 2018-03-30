@@ -759,13 +759,13 @@ DEBUG:  join prunable for intervals [0,1073741823] and [1073741824,2147483647]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-2147483648,-1073741825]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-1073741824,-1]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [0,1073741823]
-DEBUG:  pruning merge fetch taskId 2
+DEBUG:  pruning merge fetch taskId 1
 DETAIL:  Creating dependency on merge taskId 5
-DEBUG:  pruning merge fetch taskId 5
+DEBUG:  pruning merge fetch taskId 3
 DETAIL:  Creating dependency on merge taskId 10
-DEBUG:  pruning merge fetch taskId 8
+DEBUG:  pruning merge fetch taskId 5
 DETAIL:  Creating dependency on merge taskId 15
-DEBUG:  pruning merge fetch taskId 11
+DEBUG:  pruning merge fetch taskId 7
 DETAIL:  Creating dependency on merge taskId 20
 DEBUG:  cannot use real time executor with repartition jobs
 HINT:  Since you enabled citus.enable_repartition_joins Citus chose to use task-tracker.
@@ -792,13 +792,13 @@ DEBUG:  join prunable for intervals [0,1073741823] and [1073741824,2147483647]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-2147483648,-1073741825]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [-1073741824,-1]
 DEBUG:  join prunable for intervals [1073741824,2147483647] and [0,1073741823]
-DEBUG:  pruning merge fetch taskId 2
+DEBUG:  pruning merge fetch taskId 1
 DETAIL:  Creating dependency on merge taskId 5
-DEBUG:  pruning merge fetch taskId 5
+DEBUG:  pruning merge fetch taskId 3
 DETAIL:  Creating dependency on merge taskId 10
-DEBUG:  pruning merge fetch taskId 8
+DEBUG:  pruning merge fetch taskId 5
 DETAIL:  Creating dependency on merge taskId 15
-DEBUG:  pruning merge fetch taskId 11
+DEBUG:  pruning merge fetch taskId 7
 DETAIL:  Creating dependency on merge taskId 20
 DEBUG:  cannot use real time executor with repartition jobs
 HINT:  Since you enabled citus.enable_repartition_joins Citus chose to use task-tracker.
