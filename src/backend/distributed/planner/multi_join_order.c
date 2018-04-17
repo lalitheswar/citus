@@ -178,7 +178,7 @@ FixedJoinOrderList(FromExpr *fromExpr, List *tableEntryList)
 		nextJoinNode = EvaluateJoinRules(joinedTableList, currentJoinNode,
 										 nextTable, joinClauseList, joinType);
 
-		if (nextJoinNode->joinRuleType >= SINGLE_PARTITION_JOIN)
+		if (nextJoinNode->joinRuleType >= SINGLE_HASH_PARTITION_JOIN)
 		{
 			/* re-partitioning for OUTER joins is not implemented */
 			ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),

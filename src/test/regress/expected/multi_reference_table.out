@@ -1088,7 +1088,7 @@ FROM
 	reference_table_test, colocated_table_test, colocated_table_test_2
 WHERE 
 	colocated_table_test.value_1 = reference_table_test.value_1 AND colocated_table_test_2.value_1 = reference_table_test.value_1;
-LOG:  join order: [ "colocated_table_test" ][ reference join "reference_table_test" ][ dual partition join "colocated_table_test_2" ]
+LOG:  join order: [ "colocated_table_test" ][ reference join "reference_table_test" ][ single hash partition join "colocated_table_test_2" ]
  value_2 
 ---------
        1

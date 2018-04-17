@@ -94,7 +94,7 @@ FROM
 	ref_table r1, single_hash_repartition_second t1, single_hash_repartition_first t2
 WHERE
 	r1.id = t1.id AND t2.sum = t1.id;
-LOG:  join order: [ "single_hash_repartition_second" ][ broadcast join "ref_table" ][ single hash partition join "single_hash_repartition_first" ]
+LOG:  join order: [ "single_hash_repartition_second" ][ reference join "ref_table" ][ single hash partition join "single_hash_repartition_first" ]
 DEBUG:  join prunable for intervals [-2147483648,-1073741825] and [-1073741824,-1]
 DEBUG:  join prunable for intervals [-2147483648,-1073741825] and [0,1073741823]
 DEBUG:  join prunable for intervals [-2147483648,-1073741825] and [1073741824,2147483647]

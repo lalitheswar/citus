@@ -10,7 +10,7 @@ SET citus.log_multi_join_order = true;
 -- join on int column, and be empty
 SELECT * FROM repartition_udt JOIN repartition_udt_other
     ON repartition_udt.pk = repartition_udt_other.pk;
-LOG:  join order: [ "repartition_udt" ][ dual partition join "repartition_udt_other" ]
+LOG:  join order: [ "repartition_udt" ][ single hash partition join "repartition_udt_other" ]
  pk | udtcol | txtcol | pk | udtcol | txtcol 
 ----+--------+--------+----+--------+--------
 (0 rows)
