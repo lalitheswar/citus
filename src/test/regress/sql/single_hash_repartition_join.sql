@@ -109,6 +109,27 @@ WHERE
 	t1.id = t2.sum AND t2.id = t3.sum
 LIMIT 10;
 
+-- lets try one more thing, show that non uniform shard distribution doesn't
+-- end up with single hash repartitioning
+
+ UPDATE pg_dist_shard SET shardmaxvalue = shardmaxvalue::int - 1 WHERE logicalrelid IN ('single_hash_repartition_first'::regclass);
+
+-- the following queries where used to be a single hash repartition queries
+EXPLAIN SELECT 
+	count(*) 
+FROM
+	single_hash_repartition_first t1, single_hash_repartition_second t2
+WHERE
+	t1.id = t2.sum;
+
+-- the following queries where used to be a single hash repartition queries
+EXPLAIN SELECT 
+	count(*) 
+FROM
+	single_hash_repartition_first t1, single_hash_repartition_second t2
+WHERE
+	t1.sum = t2.id;
+
 RESET client_min_messages;
 
 RESET search_path;

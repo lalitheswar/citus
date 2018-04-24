@@ -387,6 +387,85 @@ DEBUG:  pruning merge fetch taskId 7
 DETAIL:  Creating dependency on merge taskId 24
 ERROR:  the query contains a join that requires repartitioning
 HINT:  Set citus.enable_repartition_joins to on to enable repartitioning
+-- lets try one more thing, show that non uniform shard distribution doesn't
+-- end up with single hash repartitioning
+ UPDATE pg_dist_shard SET shardmaxvalue = shardmaxvalue::int - 1 WHERE logicalrelid IN ('single_hash_repartition_first'::regclass);
+-- the following queries where used to be a single hash repartition queries
+EXPLAIN SELECT 
+	count(*) 
+FROM
+	single_hash_repartition_first t1, single_hash_repartition_second t2
+WHERE
+	t1.id = t2.sum;
+LOG:  join order: [ "single_hash_repartition_first" ][ dual partition join "single_hash_repartition_second" ]
+DEBUG:  join prunable for task partitionId 0 and 1
+DEBUG:  join prunable for task partitionId 0 and 2
+DEBUG:  join prunable for task partitionId 0 and 3
+DEBUG:  join prunable for task partitionId 1 and 0
+DEBUG:  join prunable for task partitionId 1 and 2
+DEBUG:  join prunable for task partitionId 1 and 3
+DEBUG:  join prunable for task partitionId 2 and 0
+DEBUG:  join prunable for task partitionId 2 and 1
+DEBUG:  join prunable for task partitionId 2 and 3
+DEBUG:  join prunable for task partitionId 3 and 0
+DEBUG:  join prunable for task partitionId 3 and 1
+DEBUG:  join prunable for task partitionId 3 and 2
+DEBUG:  pruning merge fetch taskId 1
+DETAIL:  Creating dependency on merge taskId 5
+DEBUG:  pruning merge fetch taskId 2
+DETAIL:  Creating dependency on merge taskId 5
+DEBUG:  pruning merge fetch taskId 4
+DETAIL:  Creating dependency on merge taskId 10
+DEBUG:  pruning merge fetch taskId 5
+DETAIL:  Creating dependency on merge taskId 10
+DEBUG:  pruning merge fetch taskId 7
+DETAIL:  Creating dependency on merge taskId 15
+DEBUG:  pruning merge fetch taskId 8
+DETAIL:  Creating dependency on merge taskId 15
+DEBUG:  pruning merge fetch taskId 10
+DETAIL:  Creating dependency on merge taskId 20
+DEBUG:  pruning merge fetch taskId 11
+DETAIL:  Creating dependency on merge taskId 20
+ERROR:  the query contains a join that requires repartitioning
+HINT:  Set citus.enable_repartition_joins to on to enable repartitioning
+-- the following queries where used to be a single hash repartition queries
+EXPLAIN SELECT 
+	count(*) 
+FROM
+	single_hash_repartition_first t1, single_hash_repartition_second t2
+WHERE
+	t1.sum = t2.id;
+LOG:  join order: [ "single_hash_repartition_first" ][ dual partition join "single_hash_repartition_second" ]
+DEBUG:  join prunable for task partitionId 0 and 1
+DEBUG:  join prunable for task partitionId 0 and 2
+DEBUG:  join prunable for task partitionId 0 and 3
+DEBUG:  join prunable for task partitionId 1 and 0
+DEBUG:  join prunable for task partitionId 1 and 2
+DEBUG:  join prunable for task partitionId 1 and 3
+DEBUG:  join prunable for task partitionId 2 and 0
+DEBUG:  join prunable for task partitionId 2 and 1
+DEBUG:  join prunable for task partitionId 2 and 3
+DEBUG:  join prunable for task partitionId 3 and 0
+DEBUG:  join prunable for task partitionId 3 and 1
+DEBUG:  join prunable for task partitionId 3 and 2
+DEBUG:  pruning merge fetch taskId 1
+DETAIL:  Creating dependency on merge taskId 5
+DEBUG:  pruning merge fetch taskId 2
+DETAIL:  Creating dependency on merge taskId 5
+DEBUG:  pruning merge fetch taskId 4
+DETAIL:  Creating dependency on merge taskId 10
+DEBUG:  pruning merge fetch taskId 5
+DETAIL:  Creating dependency on merge taskId 10
+DEBUG:  pruning merge fetch taskId 7
+DETAIL:  Creating dependency on merge taskId 15
+DEBUG:  pruning merge fetch taskId 8
+DETAIL:  Creating dependency on merge taskId 15
+DEBUG:  pruning merge fetch taskId 10
+DETAIL:  Creating dependency on merge taskId 20
+DEBUG:  pruning merge fetch taskId 11
+DETAIL:  Creating dependency on merge taskId 20
+ERROR:  the query contains a join that requires repartitioning
+HINT:  Set citus.enable_repartition_joins to on to enable repartitioning
 RESET client_min_messages;
 RESET search_path;
 DROP SCHEMA single_hash_repartition CASCADE;
