@@ -1048,13 +1048,19 @@ SinglePartitionJoin(JoinOrderNode *currentJoinNode, TableEntry *candidateTable,
 	Var *currentPartitionColumn = currentJoinNode->partitionColumn;
 	char currentPartitionMethod = currentJoinNode->partitionMethod;
 	TableEntry *currentAnchorTable = currentJoinNode->anchorTable;
+	DistTableCacheEntry *currentCacheEntry = NULL;
+	bool currentTableHasUniformShardDistribution = false;
+	JoinRuleType currentJoinRuleType = currentJoinNode->joinRuleType;
 
 	OpExpr *joinClause = NULL;
 
 	Oid relationId = candidateTable->relationId;
 	uint32 tableId = candidateTable->rangeTableId;
+	DistTableCacheEntry *candidateCacheEntry = DistributedTableCacheEntry(relationId);
 	Var *candidatePartitionColumn = PartitionColumn(relationId, tableId);
-	char candidatePartitionMethod = PartitionMethod(relationId);
+	char candidatePartitionMethod = candidateCacheEntry->partitionMethod;
+	bool candidateTableHasUniformShardDistribution =
+		candidateCacheEntry->hasUniformHashDistribution;
 
 	/* outer joins are not supported yet */
 	if (IS_OUTER_JOIN(joinType))
@@ -1063,10 +1069,35 @@ SinglePartitionJoin(JoinOrderNode *currentJoinNode, TableEntry *candidateTable,
 	}
 
 	/*
-	 * If we previously dual-hash re-partitioned the tables for a join, we
-	 * currently don't allow a single-repartition join.
+	 * If we previously dual-hash re-partitioned the tables for a join or made
+	 * cartesian product, we currently don't allow a single-repartition join.
 	 */
-	if (currentPartitionMethod == REDISTRIBUTE_BY_HASH)
+	if (currentJoinRuleType == DUAL_PARTITION_JOIN ||
+		currentJoinRuleType == CARTESIAN_PRODUCT)
+	{
+		return NULL;
+	}
+
+	/*
+	 * Citus currently doesn't support single hash repartition joins when any table
+	 * involved has a non uniform shard distribution (e.g., most likely undergone
+	 * a tenant isoaltion).
+	 *
+	 * In fact, we could allow the table which is going to be repartitioned to
+	 * have a non uniform shard distribution. However, we prefer not to allow it
+	 * to have a more consistent user experience.
+	 *
+	 * To enable this, we should make sure that worker_hash_partition_table() is aware
+	 * of non uniform shard distributions and make sure that both query shard pruning
+	 * and repartitioning shard pruning behaves exactly the same.
+	 */
+	currentCacheEntry = DistributedTableCacheEntry(currentAnchorTable->relationId);
+	currentTableHasUniformShardDistribution =
+		currentCacheEntry->hasUniformHashDistribution;
+	if ((currentPartitionMethod == DISTRIBUTE_BY_HASH &&
+		 !currentTableHasUniformShardDistribution) ||
+		(candidatePartitionMethod == DISTRIBUTE_BY_HASH &&
+		 !candidateTableHasUniformShardDistribution))
 	{
 		return NULL;
 	}
