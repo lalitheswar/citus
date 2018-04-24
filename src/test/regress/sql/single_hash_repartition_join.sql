@@ -68,6 +68,47 @@ FROM
 WHERE
 	t1.id = t2.id AND t1.avg = t3.id;
 
+-- single repartition query in CTE
+-- should work fine
+EXPLAIN WITH cte1 AS 
+(
+	SELECT 
+		t1.id * t2.avg as data
+	FROM
+		single_hash_repartition_first t1, single_hash_repartition_second t2
+	WHERE
+		t1.id = t2.sum
+	AND t1.sum > 5000
+	ORDER BY 1 DESC
+	LIMIT 50
+)
+SELECT
+	count(*)
+FROM
+	cte1, single_hash_repartition_first
+WHERE
+	cte1.data > single_hash_repartition_first.id;
+
+
+-- two single repartitions
+EXPLAIN SELECT 
+	count(*)
+FROM
+	single_hash_repartition_first t1, single_hash_repartition_second t2, single_hash_repartition_second t3
+WHERE
+	t1.id = t2.sum AND t2.sum = t3.id;
+
+
+-- two single repartitions again, but this 
+-- time the columns of the second join is reverted
+EXPLAIN SELECT 
+	avg(t1.avg + t2.avg)
+FROM
+	single_hash_repartition_first t1, single_hash_repartition_second t2, single_hash_repartition_second t3
+WHERE
+	t1.id = t2.sum AND t2.id = t3.sum
+LIMIT 10;
+
 RESET client_min_messages;
 
 RESET search_path;
