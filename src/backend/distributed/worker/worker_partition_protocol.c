@@ -1225,19 +1225,18 @@ HashPartitionId(Datum partitionValue, const void *context)
 	ShardInterval **syntheticShardIntervalArray =
 		hashPartitionContext->syntheticShardIntervalArray;
 	FmgrInfo *comparisonFunction = hashPartitionContext->comparisonFunction;
-	Datum hashDatum = 0;
+	Datum hashDatum = FunctionCall1(hashFunction, partitionValue);
 	int32 hashResult = 0;
 	uint32 hashPartitionId = 0;
+
+	if (hashDatum == 0)
+	{
+		return hashPartitionId;
+	}
 
 	if (hashPartitionContext->hasUniformHashDistribution)
 	{
 		uint64 hashTokenIncrement = HASH_TOKEN_COUNT / partitionCount;
-
-		hashDatum = FunctionCall1(hashFunction, partitionValue);
-		if (hashDatum == 0)
-		{
-			return hashPartitionId;
-		}
 
 		hashResult = DatumGetInt32(hashDatum);
 		hashPartitionId = (uint32) (hashResult - INT32_MIN) / hashTokenIncrement;
@@ -1245,7 +1244,7 @@ HashPartitionId(Datum partitionValue, const void *context)
 	else
 	{
 		hashPartitionId =
-			SearchCachedShardInterval(partitionValue, syntheticShardIntervalArray,
+			SearchCachedShardInterval(hashDatum, syntheticShardIntervalArray,
 									  partitionCount, comparisonFunction);
 	}
 
