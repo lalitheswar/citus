@@ -87,3 +87,7 @@ test_script:
 on_failure:
   - ps: cd C:\projects\postgres\contrib\citus\src\test\regress
   - type regression.diffs
+  - ps: $s = Get-Content -Path .\expected\multi_real_time_transaction.out -Raw
+  - ps: $s.substring(0, 100) | Format-Hex
+  - ps: $s = Get-Content -Path .\results\multi_real_time_transaction.out -Raw
+  - ps: $s.substring(0, 100) | Format-Hex
