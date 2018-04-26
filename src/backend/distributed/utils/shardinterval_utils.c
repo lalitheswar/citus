@@ -25,11 +25,6 @@
 #include "utils/memutils.h"
 
 
-static int SearchCachedShardInterval(Datum partitionColumnValue,
-									 ShardInterval **shardIntervalCache,
-									 int shardCount, FmgrInfo *compareFunction);
-
-
 /*
  * LowestShardIntervalById returns the shard interval with the lowest shard
  * ID from a list of shard intervals.
@@ -333,7 +328,7 @@ FindShardIntervalIndex(Datum searchedValue, DistTableCacheEntry *cacheEntry)
  * array. If it can not find any shard interval with the given value, it returns
  * INVALID_SHARD_INDEX.
  */
-static int
+int
 SearchCachedShardInterval(Datum partitionColumnValue, ShardInterval **shardIntervalCache,
 						  int shardCount, FmgrInfo *compareFunction)
 {

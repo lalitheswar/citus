@@ -114,7 +114,9 @@ LIMIT 10;
 
  UPDATE pg_dist_shard SET shardmaxvalue = shardmaxvalue::int - 1 WHERE logicalrelid IN ('single_hash_repartition_first'::regclass);
 
--- the following queries where used to be a single hash repartition queries
+-- the following queries should also be a single hash repartition queries
+-- note that since we've manually updated the metadata without changing the
+-- the corresponding data, the results of the query would be wrong
 EXPLAIN SELECT 
 	count(*) 
 FROM
@@ -122,7 +124,9 @@ FROM
 WHERE
 	t1.id = t2.sum;
 
--- the following queries where used to be a single hash repartition queries
+-- the following queries should also be a single hash repartition queries
+-- note that since we've manually updated the metadata without changing the
+-- the corresponding data, the results of the query would be wrong
 EXPLAIN SELECT 
 	count(*) 
 FROM

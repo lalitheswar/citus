@@ -54,6 +54,9 @@ static uint32 FileBufferSizeInBytes = 0; /* file buffer size to init later */
 
 
 /* Local functions forward declarations */
+static ShardInterval ** SyntheticShardIntervalArrayForShardMinValues(
+	Datum *shardMinValues,
+	int shardCount);
 static StringInfo InitTaskAttemptDirectory(uint64 jobId, uint32 taskId);
 static uint32 FileBufferSize(int partitionBufferSizeInKB, uint32 fileCount);
 static FileOutputStream * OpenPartitionFiles(StringInfo directoryName, uint32 fileCount);
@@ -208,7 +211,18 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 	partitionContext = palloc0(sizeof(HashPartitionContext));
 	partitionContext->hashFunction = hashFunction;
 	partitionContext->partitionCount = partitionCount;
-	partitionContext->splitPointArray = hashRangeArray;
+	partitionContext->syntheticShardIntervalArray =
+		SyntheticShardIntervalArrayForShardMinValues(hashRangeArray, partitionCount);
+	partitionContext->hasUniformHashDistribution =
+		HasUniformHashDistribution(partitionContext->syntheticShardIntervalArray,
+								   partitionCount);
+
+	/* we'll use binary search, we need the comparison function */
+	if (!partitionContext->hasUniformHashDistribution)
+	{
+		partitionContext->comparisonFunction =
+			GetFunctionInfo(partitionColumnType, BTREE_AM_OID, BTORDER_PROC);
+	}
 
 	/* init directories and files to write the partitioned data to */
 	taskDirectory = InitTaskDirectory(jobId, taskId);
@@ -228,6 +242,39 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 	RenameDirectory(taskAttemptDirectory, taskDirectory);
 
 	PG_RETURN_VOID();
+}
+
+
+/*
+ * SyntheticShardIntervalArrayForShardMinValues returns a shard interval pointer array
+ * which gets the shardMinValues from the input shardMinValues array. Note that
+ * we simply calculate shard max values by decrementing previous shard min values by one.
+ *
+ * The function only fills the min/max values of shard the intervals. Thus, should
+ * not be used for general purpose operations.
+ */
+static ShardInterval **
+SyntheticShardIntervalArrayForShardMinValues(Datum *shardMinValues, int shardCount)
+{
+	int shardIndex = 0;
+	Datum nextShardMaxValue = Int32GetDatum(INT32_MAX);
+	ShardInterval **syntheticShardIntervalArray =
+		palloc(sizeof(ShardInterval *) * shardCount);
+
+	for (shardIndex = shardCount - 1; shardIndex >= 0; --shardIndex)
+	{
+		Datum currentShardMinValue = shardMinValues[shardIndex];
+		ShardInterval *shardInterval = CitusMakeNode(ShardInterval);
+
+		shardInterval->minValue = currentShardMinValue;
+		shardInterval->maxValue = nextShardMaxValue;
+
+		nextShardMaxValue = Int32GetDatum(DatumGetInt32(currentShardMinValue) - 1);
+
+		syntheticShardIntervalArray[shardIndex] = shardInterval;
+	}
+
+	return syntheticShardIntervalArray;
 }
 
 
@@ -1175,20 +1222,33 @@ HashPartitionId(Datum partitionValue, const void *context)
 	HashPartitionContext *hashPartitionContext = (HashPartitionContext *) context;
 	FmgrInfo *hashFunction = hashPartitionContext->hashFunction;
 	uint32 partitionCount = hashPartitionContext->partitionCount;
+	ShardInterval **syntheticShardIntervalArray =
+		hashPartitionContext->syntheticShardIntervalArray;
+	FmgrInfo *comparisonFunction = hashPartitionContext->comparisonFunction;
 	Datum hashDatum = 0;
 	int32 hashResult = 0;
 	uint32 hashPartitionId = 0;
 
-	uint64 hashTokenIncrement = HASH_TOKEN_COUNT / partitionCount;
-
-	hashDatum = FunctionCall1(hashFunction, partitionValue);
-	if (hashDatum == 0)
+	if (hashPartitionContext->hasUniformHashDistribution)
 	{
-		return hashPartitionId;
+		uint64 hashTokenIncrement = HASH_TOKEN_COUNT / partitionCount;
+
+		hashDatum = FunctionCall1(hashFunction, partitionValue);
+		if (hashDatum == 0)
+		{
+			return hashPartitionId;
+		}
+
+		hashResult = DatumGetInt32(hashDatum);
+		hashPartitionId = (uint32) (hashResult - INT32_MIN) / hashTokenIncrement;
+	}
+	else
+	{
+		hashPartitionId =
+			SearchCachedShardInterval(partitionValue, syntheticShardIntervalArray,
+									  partitionCount, comparisonFunction);
 	}
 
-	hashResult = DatumGetInt32(hashDatum);
-	hashPartitionId = (uint32) (hashResult - INT32_MIN) / hashTokenIncrement;
 
 	return hashPartitionId;
 }
