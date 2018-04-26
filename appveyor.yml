@@ -91,3 +91,7 @@ on_failure:
   - ps: $s.substring(0, 100) | Format-Hex
   - ps: $s = Get-Content -Path .\results\multi_real_time_transaction.out -Raw
   - ps: $s.substring(0, 100) | Format-Hex
+  - ps: $s = Get-Content -Path .\expected\with_basics.out -Raw
+  - ps: $s.substring(0, 100) | Format-Hex
+  - ps: $s = Get-Content -Path .\results\with_basics.out -Raw
+  - ps: $s.substring(0, 100) | Format-Hex
