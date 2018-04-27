@@ -1054,9 +1054,8 @@ SinglePartitionJoin(JoinOrderNode *currentJoinNode, TableEntry *candidateTable,
 
 	Oid relationId = candidateTable->relationId;
 	uint32 tableId = candidateTable->rangeTableId;
-	DistTableCacheEntry *candidateCacheEntry = DistributedTableCacheEntry(relationId);
 	Var *candidatePartitionColumn = PartitionColumn(relationId, tableId);
-	char candidatePartitionMethod = candidateCacheEntry->partitionMethod;
+	char candidatePartitionMethod = PartitionMethod(relationId);
 
 	/* outer joins are not supported yet */
 	if (IS_OUTER_JOIN(joinType))
