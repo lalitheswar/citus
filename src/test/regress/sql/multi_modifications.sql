@@ -572,12 +572,16 @@ WHERE id = 1;
 
 SELECT * FROM summary_table ORDER BY id;
 
--- unsupported multi-shard updates
+-- multi-shard updates with recursively planned subqueries
+BEGIN;
 UPDATE summary_table SET average_value = average_query.average FROM (
 	SELECT avg(value) AS average FROM raw_table) average_query;
+ROLLBACK;
 
+BEGIN;
 UPDATE summary_table SET average_value = average_value + 1 WHERE id =
-  (SELECT id FROM raw_table WHERE value > 100);
+  (SELECT id FROM raw_table WHERE value > 100 LIMIT 1);
+ROLLBACK;
 
 -- test complex queries
 UPDATE summary_table
