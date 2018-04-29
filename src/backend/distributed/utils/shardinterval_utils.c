@@ -327,6 +327,15 @@ FindShardIntervalIndex(Datum searchedValue, DistTableCacheEntry *cacheEntry)
  * matching a given partition column value and returns it's index in the cached
  * array. If it can not find any shard interval with the given value, it returns
  * INVALID_SHARD_INDEX.
+ *
+ * TODO: Data re-partitioning logic (e.g., worker_hash_partition_table())
+ * on the worker nodes relies on this function in order to be consistent
+ * with shard pruning. Since the worker nodes don't have the metadata, a
+ * synthetically generated ShardInterval ** is passed to the to this
+ * function. The synthetic shard intervals contain only shardmin and shardmax
+ * values. A proper implementation of this approach should be introducing an
+ * intermediate data structure (e.g., ShardRange) on which this function
+ * operates instead of operating shard intervals.
  */
 int
 SearchCachedShardInterval(Datum partitionColumnValue, ShardInterval **shardIntervalCache,
