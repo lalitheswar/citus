@@ -320,6 +320,8 @@ extern int CompareShardPlacements(const void *leftElement, const void *rightElem
 extern bool ShardIntervalsOverlap(ShardInterval *firstInterval,
 								  ShardInterval *secondInterval);
 extern bool CoPartitionedTables(Oid firstRelationId, Oid secondRelationId);
+extern ShardInterval ** GenerateSyntheticShardIntervalArray(int partitionCount);
+
 
 /* function declarations for Task and Task list operations */
 extern bool TasksEqual(const Task *a, const Task *b);

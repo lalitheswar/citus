@@ -30,9 +30,11 @@
 #include "access/nbtree.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_collation.h"
+#include "catalog/pg_type.h"
 #include "commands/copy.h"
 #include "commands/defrem.h"
 #include "distributed/multi_copy.h"
+#include "distributed/multi_physical_planner.h"
 #include "distributed/resource_lock.h"
 #include "distributed/transmit.h"
 #include "distributed/worker_protocol.h"
@@ -182,7 +184,7 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 	text *filterQueryText = PG_GETARG_TEXT_P(2);
 	text *partitionColumnText = PG_GETARG_TEXT_P(3);
 	Oid partitionColumnType = PG_GETARG_OID(4);
-	ArrayType *hashRangeObject = PG_GETARG_ARRAYTYPE_P(5);
+	ArrayType *hashRangeObject = NULL;
 
 	const char *filterQuery = text_to_cstring(filterQueryText);
 	const char *partitionColumn = text_to_cstring(partitionColumnText);
@@ -196,26 +198,60 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 	FileOutputStream *partitionFileArray = NULL;
 	uint32 fileCount = 0;
 
+	Oid sixthParameterOid = InvalidOid;
+
 	CheckCitusVersion(ERROR);
+
+	partitionContext = palloc0(sizeof(HashPartitionContext));
+
+	/*
+	 * We do this hack for backward compatibility.
+	 *
+	 * In the older versions of Citus, worker_hash_partition_table()'s 6th parameter
+	 * was an integer which denoted the number of buckets to split the shard's data.
+	 * In the later versions of Citus, the sixth parameter is changed to get an array
+	 * of shard ranges, which is used as the ranges to split the shard's data.
+	 *
+	 * If a never version of Citus coordinator is used with older versions of Citus, we'd
+	 * be able to support hash repartitioning by acting according to the sixth parameter.
+	 */
+	sixthParameterOid = get_fn_expr_argtype(fcinfo->flinfo, 5);
+	if (sixthParameterOid == INT4ARRAYOID)
+	{
+		hashRangeObject = PG_GETARG_ARRAYTYPE_P(5);
+
+		hashRangeArray = DeconstructArrayObject(hashRangeObject);
+		partitionCount = ArrayObjectCount(hashRangeObject);
+
+		partitionContext->syntheticShardIntervalArray =
+			SyntheticShardIntervalArrayForShardMinValues(hashRangeArray, partitionCount);
+		partitionContext->hasUniformHashDistribution =
+			HasUniformHashDistribution(partitionContext->syntheticShardIntervalArray,
+									   partitionCount);
+	}
+	else if (sixthParameterOid == INT4OID)
+	{
+		partitionCount = PG_GETARG_UINT32(5);
+
+		partitionContext->syntheticShardIntervalArray =
+			GenerateSyntheticShardIntervalArray(partitionCount);
+		partitionContext->hasUniformHashDistribution = true;
+	}
+	else
+	{
+		/* we should never get other type of parameters */
+		ereport(ERROR, (errmsg("unexpected parameter for "
+							   "worker_hash_partition_table()")));
+	}
 
 	/* use column's type information to get the hashing function */
 	hashFunction = GetFunctionInfo(partitionColumnType, HASH_AM_OID, HASHSTANDARD_PROC);
 
-	hashRangeArray = DeconstructArrayObject(hashRangeObject);
-	partitionCount = ArrayObjectCount(hashRangeObject);
-
 	/* we create as many files as the number of split points */
 	fileCount = partitionCount;
 
-	/* create hash partition context object */
-	partitionContext = palloc0(sizeof(HashPartitionContext));
 	partitionContext->hashFunction = hashFunction;
 	partitionContext->partitionCount = partitionCount;
-	partitionContext->syntheticShardIntervalArray =
-		SyntheticShardIntervalArrayForShardMinValues(hashRangeArray, partitionCount);
-	partitionContext->hasUniformHashDistribution =
-		HasUniformHashDistribution(partitionContext->syntheticShardIntervalArray,
-								   partitionCount);
 
 	/* we'll use binary search, we need the comparison function */
 	if (!partitionContext->hasUniformHashDistribution)

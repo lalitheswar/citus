@@ -185,7 +185,6 @@ static int CompareTasksByTaskId(const void *leftElement, const void *rightElemen
 static void AssignDataFetchDependencies(List *taskList);
 static uint32 TaskListHighestTaskId(List *taskList);
 static List * MapTaskList(MapMergeJob *mapMergeJob, List *filterTaskList);
-static ShardInterval ** GenerateSyntheticShardIntervalArray(int partitionCount);
 static char * ColumnName(Var *column, List *rangeTableList);
 static StringInfo SplitPointArrayString(ArrayType *splitPointObject,
 										Oid columnType, int32 columnTypeMod);
@@ -4240,7 +4239,7 @@ MapTaskList(MapMergeJob *mapMergeJob, List *filterTaskList)
  * The function only fills the min/max values of shard the intervals. Thus, should
  * not be used for general purpose operations.
  */
-static ShardInterval **
+ShardInterval **
 GenerateSyntheticShardIntervalArray(int partitionCount)
 {
 	ShardInterval **shardIntervalArray = palloc0(partitionCount *
