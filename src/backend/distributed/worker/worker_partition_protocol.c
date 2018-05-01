@@ -79,6 +79,7 @@ static void OutputBinaryHeaders(FileOutputStream *partitionFileArray, uint32 fil
 static void OutputBinaryFooters(FileOutputStream *partitionFileArray, uint32 fileCount);
 static uint32 RangePartitionId(Datum partitionValue, const void *context);
 static uint32 HashPartitionId(Datum partitionValue, const void *context);
+static uint32 HashPartitionIdViaDeprecatedAPI(Datum partitionValue, const void *context);
 static bool FileIsLink(char *filename, struct stat filestat);
 
 
@@ -198,6 +199,8 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 	FileOutputStream *partitionFileArray = NULL;
 	uint32 fileCount = 0;
 
+	uint32 (*HashPartitionIdFunction)(Datum, const void *);
+
 	Oid partitionBucketOid = InvalidOid;
 
 	CheckCitusVersion(ERROR);
@@ -229,7 +232,7 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 			HasUniformHashDistribution(partitionContext->syntheticShardIntervalArray,
 									   partitionCount);
 
-		partitionContext->deprecatedAPIcall = false;
+		HashPartitionIdFunction = &HashPartitionId;
 	}
 	else if (partitionBucketOid == INT4OID)
 	{
@@ -239,7 +242,7 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 			GenerateSyntheticShardIntervalArray(partitionCount);
 		partitionContext->hasUniformHashDistribution = true;
 
-		partitionContext->deprecatedAPIcall = true;
+		HashPartitionIdFunction = &HashPartitionIdViaDeprecatedAPI;
 	}
 	else
 	{
@@ -273,7 +276,7 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 
 	/* call the partitioning function that does the actual work */
 	FilterAndPartitionTable(filterQuery, partitionColumn, partitionColumnType,
-							&HashPartitionId, (const void *) partitionContext,
+							HashPartitionIdFunction, (const void *) partitionContext,
 							partitionFileArray, fileCount);
 
 	/* close partition files and atomically rename (commit) them */
@@ -1255,9 +1258,6 @@ RangePartitionId(Datum partitionValue, const void *context)
  * using hash partitioning. More specifically, the function returns zero if the
  * given data value is null. If not, the function follows the exact same approach
  * as Citus distributed planner uses.
- *
- * Note that this function also supports deprecated APIs, which uses a slightly
- * different hash calculation method.
  */
 static uint32
 HashPartitionId(Datum partitionValue, const void *context)
@@ -1271,18 +1271,6 @@ HashPartitionId(Datum partitionValue, const void *context)
 	Datum hashDatum = FunctionCall1(hashFunction, partitionValue);
 	int32 hashResult = 0;
 	uint32 hashPartitionId = 0;
-
-	/*
-	 * This is to provide backward compatibility. See comments in
-	 * worker_hash_partition_table().
-	 */
-	if (hashPartitionContext->deprecatedAPIcall)
-	{
-		hashResult = DatumGetUInt32(hashDatum);
-		hashPartitionId = (hashResult % partitionCount);
-
-		return hashPartitionId;
-	}
 
 	if (hashDatum == 0)
 	{
@@ -1303,6 +1291,40 @@ HashPartitionId(Datum partitionValue, const void *context)
 									  partitionCount, comparisonFunction);
 	}
 
+
+	return hashPartitionId;
+}
+
+
+/*
+ * HashPartitionIdViaDeprecatedAPI is required to provide backward compatibility
+ * between the Citus versions 7.4 and older versions.
+ *
+ * HashPartitionIdViaDeprecatedAPI determines the partition number for the given data value
+ * using hash partitioning. More specifically, the function returns zero if the
+ * given data value is null. If not, the function applies the standard Postgres
+ * hashing function for the given data type, and mods the hashed result with the
+ * number of partitions. The function then returns the modded number as the
+ * partition number.
+ *
+ * Note that any changes to PostgreSQL's hashing functions will reshuffle the
+ * entire distribution created by this function. For a discussion of this issue,
+ * see Google "PL/Proxy Users: Hash Functions Have Changed in PostgreSQL 8.4."
+ */
+static uint32
+HashPartitionIdViaDeprecatedAPI(Datum partitionValue, const void *context)
+{
+	HashPartitionContext *hashPartitionContext = (HashPartitionContext *) context;
+	FmgrInfo *hashFunction = hashPartitionContext->hashFunction;
+	uint32 partitionCount = hashPartitionContext->partitionCount;
+	Datum hashDatum = 0;
+	uint32 hashResult = 0;
+	uint32 hashPartitionId = 0;
+
+	/* hash functions return unsigned 32-bit integers */
+	hashDatum = FunctionCall1(hashFunction, partitionValue);
+	hashResult = DatumGetUInt32(hashDatum);
+	hashPartitionId = (hashResult % partitionCount);
 
 	return hashPartitionId;
 }

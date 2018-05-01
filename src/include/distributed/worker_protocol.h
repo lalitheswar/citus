@@ -78,7 +78,6 @@ typedef struct HashPartitionContext
 	ShardInterval **syntheticShardIntervalArray;
 	uint32 partitionCount;
 	bool hasUniformHashDistribution;
-	bool deprecatedAPIcall;
 } HashPartitionContext;
 
 
