@@ -198,7 +198,7 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 	FileOutputStream *partitionFileArray = NULL;
 	uint32 fileCount = 0;
 
-	Oid sixthParameterOid = InvalidOid;
+	Oid partitionBucketOid = InvalidOid;
 
 	CheckCitusVersion(ERROR);
 
@@ -212,11 +212,11 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 	 * In the later versions of Citus, the sixth parameter is changed to get an array
 	 * of shard ranges, which is used as the ranges to split the shard's data.
 	 *
-	 * If a never version of Citus coordinator is used with older versions of Citus, we'd
-	 * be able to support hash repartitioning by acting according to the sixth parameter.
+	 * Keeping this value is important if the coordinator's Citus version is <= 7.3
+	 * and worker Citus version is > 7.3.
 	 */
-	sixthParameterOid = get_fn_expr_argtype(fcinfo->flinfo, 5);
-	if (sixthParameterOid == INT4ARRAYOID)
+	partitionBucketOid = get_fn_expr_argtype(fcinfo->flinfo, 5);
+	if (partitionBucketOid == INT4ARRAYOID)
 	{
 		hashRangeObject = PG_GETARG_ARRAYTYPE_P(5);
 
@@ -228,14 +228,18 @@ worker_hash_partition_table(PG_FUNCTION_ARGS)
 		partitionContext->hasUniformHashDistribution =
 			HasUniformHashDistribution(partitionContext->syntheticShardIntervalArray,
 									   partitionCount);
+
+		partitionContext->deprecatedAPIcall = false;
 	}
-	else if (sixthParameterOid == INT4OID)
+	else if (partitionBucketOid == INT4OID)
 	{
 		partitionCount = PG_GETARG_UINT32(5);
 
 		partitionContext->syntheticShardIntervalArray =
 			GenerateSyntheticShardIntervalArray(partitionCount);
 		partitionContext->hasUniformHashDistribution = true;
+
+		partitionContext->deprecatedAPIcall = true;
 	}
 	else
 	{
@@ -1251,6 +1255,9 @@ RangePartitionId(Datum partitionValue, const void *context)
  * using hash partitioning. More specifically, the function returns zero if the
  * given data value is null. If not, the function follows the exact same approach
  * as Citus distributed planner uses.
+ *
+ * Note that this function also supports deprecated APIs, which uses a slightly
+ * different hash calculation method.
  */
 static uint32
 HashPartitionId(Datum partitionValue, const void *context)
@@ -1264,6 +1271,19 @@ HashPartitionId(Datum partitionValue, const void *context)
 	Datum hashDatum = FunctionCall1(hashFunction, partitionValue);
 	int32 hashResult = 0;
 	uint32 hashPartitionId = 0;
+
+	/*
+	 * This is to provide backward compatibility. See comments in
+	 * worker_hash_partition_table().
+	 */
+	if (hashPartitionContext->deprecatedAPIcall)
+	{
+		hashDatum = FunctionCall1(hashFunction, partitionValue);
+		hashResult = DatumGetUInt32(hashDatum);
+		hashPartitionId = (hashResult % partitionCount);
+
+		return hashPartitionId;
+	}
 
 	if (hashDatum == 0)
 	{
