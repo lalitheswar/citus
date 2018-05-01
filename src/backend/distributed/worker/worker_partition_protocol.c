@@ -1278,7 +1278,6 @@ HashPartitionId(Datum partitionValue, const void *context)
 	 */
 	if (hashPartitionContext->deprecatedAPIcall)
 	{
-		hashDatum = FunctionCall1(hashFunction, partitionValue);
 		hashResult = DatumGetUInt32(hashDatum);
 		hashPartitionId = (hashResult % partitionCount);
 
