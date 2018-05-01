@@ -15,6 +15,7 @@ BEGIN
     SELECT array_agg(object_identity) INTO sequence_names
     FROM pg_event_trigger_dropped_objects()
     WHERE object_type = 'sequence';
+
     FOR v_obj IN SELECT * FROM pg_event_trigger_dropped_objects()
                  WHERE object_type IN ('table', 'foreign table')
     LOOP
