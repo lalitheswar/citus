@@ -1935,6 +1935,21 @@ EXECUTE insert_prep(6);
 
 SELECT user_id, value_1 FROM raw_events_first ORDER BY user_id, value_1;
 
+-- intermediate results (CTEs) should be allowed when doing INSERT...SELECT within a CTE
+WITH series AS (
+  SELECT s AS val FROM generate_series(1,10) s
+),
+inserts AS (
+  INSERT INTO raw_events_second (user_id)
+  SELECT
+    user_id
+  FROM
+    raw_events_first JOIN series ON (value_1 = val)
+  RETURNING
+    NULL
+)
+SELECT count(*) FROM inserts;
+
 -- Inserting into views is handled via coordinator
 TRUNCATE raw_events_first;
 
