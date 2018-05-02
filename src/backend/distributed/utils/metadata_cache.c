@@ -563,6 +563,43 @@ LookupNodeForGroup(uint32 groupId)
 	}
 }
 
+/*
+ * NodeShardList returns the list of shards that are hosted at the given node.
+ *
+ * Basically we're doing the following SQL query:
+ *
+    select shardid
+      from pg_dist_node
+           join pg_dist_placement using(groupid)
+    where nodeid = <nodeId>;
+ */
+List *
+NodeShardList(int32 nodeId)
+{
+	int32 groupId = -1;
+	bool foundInCache = false;
+	WorkerNode *workerNode = NULL;
+
+	/*
+	 * First get the groupId for the given nodeId.
+	 */
+	workerNode = (WorkerNode *) hash_search(WorkerNodeHash, &nodeId,
+											HASH_FIND, &foundInCache);
+
+	if (!foundInCache)
+	{
+		/* if nodeId is unknown then we don't have Shart list for this node. */
+		return NIL;
+	}
+
+	groupId = workerNode->groupId;
+
+	/*
+	 * We now have the groupId for our nodeId and we can scan pg_dist_placement
+	 * for the list of shards found on the node.
+	 */
+	return BuildShardPlacementListForGroup(groupId);
+}
 
 /*
  * ShardPlacementList returns the list of placements for the given shard from

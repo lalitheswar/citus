@@ -84,6 +84,7 @@ extern ShardPlacement * LoadShardPlacement(uint64 shardId, uint64 placementId);
 extern DistTableCacheEntry * DistributedTableCacheEntry(Oid distributedRelationId);
 extern int GetLocalGroupId(void);
 extern List * DistTableOidList(void);
+extern List * NodeShardList(int32 nodeId);
 extern List * ShardPlacementList(uint64 shardId);
 extern void CitusInvalidateRelcacheByRelid(Oid relationId);
 extern void CitusInvalidateRelcacheByShardId(int64 shardId);

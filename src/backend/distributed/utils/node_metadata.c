@@ -469,20 +469,25 @@ master_update_node(PG_FUNCTION_ARGS)
 
 	char *newNodeNameString = text_to_cstring(newNodeName);
 
+	List *shardList = NodeShardList(nodeId);
+
 	CheckCitusVersion(ERROR);
 
 	/*
 	 * This lock has two purposes:
-	 * - Ensure buggy code in Citus doesn't cause failures when the nodename/nodeport of
-	 *   a node changes mid-query
-	 * - Provide fencing during failover, after this function returns all connections
-	 *   will use the new node location.
+	 *
+	 * - Ensure buggy code in Citus doesn't cause failures when the
+	 *   nodename/nodeport of a node changes mid-query
+	 *
+	 * - Provide fencing during failover, after this function returns all
+	 *   connections will use the new node location.
 	 *
 	 * Drawback:
-	 * - This function blocks until all previous queries have finished. This means that
-	 *   long-running queries will prevent failover.
+	 *
+	 * - This function blocks until all previous queries have finished. This
+	 *   means that long-running queries will prevent failover.
 	 */
-	LockRelationOid(DistNodeRelationId(), AccessExclusiveLock);
+	LockShardListResources(shardList, AccessExclusiveLock);
 
 	if (FindWorkerNodeAnyCluster(newNodeNameString, newNodePort) != NULL)
 	{

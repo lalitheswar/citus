@@ -772,6 +772,44 @@ BuildShardPlacementList(ShardInterval *shardInterval)
 	return shardPlacementList;
 }
 
+List *
+BuildShardPlacementListForGroup(int32 groupId)
+{
+	List *shardPlacementList = NIL;
+	Relation pgPlacement = NULL;
+	SysScanDesc scanDescriptor = NULL;
+	ScanKeyData scanKey[1];
+	int scanKeyCount = 1;
+	bool indexOK = true;
+	HeapTuple heapTuple = NULL;
+
+	pgPlacement = heap_open(DistPlacementRelationId(), AccessShareLock);
+
+	ScanKeyInit(&scanKey[0], Anum_pg_dist_placement_shardid,
+				BTEqualStrategyNumber, F_INT8EQ, Int64GetDatum(groupId));
+
+	scanDescriptor = systable_beginscan(pgPlacement,
+										DistPlacementShardidIndexId(), indexOK,
+										NULL, scanKeyCount, scanKey);
+
+	heapTuple = systable_getnext(scanDescriptor);
+	while (HeapTupleIsValid(heapTuple))
+	{
+		TupleDesc tupleDescriptor = RelationGetDescr(pgPlacement);
+
+		GroupShardPlacement *placement =
+			TupleToGroupShardPlacement(tupleDescriptor, heapTuple);
+
+		shardPlacementList = lappend(shardPlacementList, placement);
+
+		heapTuple = systable_getnext(scanDescriptor);
+	}
+
+	systable_endscan(scanDescriptor);
+	heap_close(pgPlacement, NoLock);
+
+	return shardPlacementList;
+}
 
 /*
  * TupleToGroupShardPlacement takes in a heap tuple from pg_dist_placement,
