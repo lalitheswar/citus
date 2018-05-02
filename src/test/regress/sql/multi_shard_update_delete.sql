@@ -591,14 +591,15 @@ SET    value_2 = 5
 FROM   events_test_table_local
 WHERE  users_test_table.user_id = events_test_table_local.user_id;
 
-UPDATE users_test_table
-SET    value_2 = 5
-WHERE  users_test_table.user_id IN(SELECT user_id FROM events_test_table_local);
-
 UPDATE events_test_table_local
 SET    value_2 = 5
 FROM   users_test_table
 WHERE  events_test_table_local.user_id = users_test_table.user_id;
+
+-- Local tables in a subquery are supported through recursive planning
+UPDATE users_test_table
+SET    value_2 = 5
+WHERE  users_test_table.user_id IN(SELECT user_id FROM events_test_table_local);
 
 -- Shard counts of tables must be equal to pushdown the query
 UPDATE users_test_table

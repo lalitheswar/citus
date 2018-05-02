@@ -111,7 +111,7 @@ WHERE
 UPDATE 
 	distributed_table 
 SET 
-	info =  row_to_json(row(avg_tenant_id))
+	dept = avg_tenant_id::int
 FROM 
 (
 	SELECT 
@@ -128,7 +128,7 @@ RETURNING
 UPDATE 
 	distributed_table 
 SET 
-	info =  row_to_json(row(avg_tenant_id))
+	dept = avg_tenant_id::int
 FROM 
 (
 	SELECT 
