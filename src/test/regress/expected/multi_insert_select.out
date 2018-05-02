@@ -2189,14 +2189,14 @@ TRUNCATE raw_events_first;
 BEGIN;
 INSERT INTO raw_events_first (user_id, value_1)
 SELECT s, s FROM generate_series(1, 5) s;
-SELECT user_id, value_1 FROM raw_events_first;
+SELECT user_id, value_1 FROM raw_events_first ORDER BY 1;
  user_id | value_1 
 ---------+---------
+       1 |       1
+       2 |       2
        3 |       3
        4 |       4
-       1 |       1
        5 |       5
-       2 |       2
 (5 rows)
 
 ROLLBACK;

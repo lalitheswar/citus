@@ -815,7 +815,7 @@ ABORT;
 
 -- copy into a table with a JSONB column
 CREATE TABLE copy_jsonb (key text, value jsonb, extra jsonb default '["default"]'::jsonb);
-SELECT create_distributed_table('copy_jsonb', 'key');
+SELECT create_distributed_table('copy_jsonb', 'key', colocate_with => 'none');
 
 -- JSONB from text should work
 \COPY copy_jsonb (key, value) FROM STDIN
